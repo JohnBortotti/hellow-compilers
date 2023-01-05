@@ -77,8 +77,29 @@ impl Scanner {
       '\r' => (token::TokenType::Ignore, "".to_string()),
       '\t' => (token::TokenType::Ignore, "".to_string()),
       '\n' => (token::TokenType::Break, "".to_string()),
-      _ => (panic!("token not found at line {}, token: {}", self.line, self.peek(self.pointer))),
-    }
+      a => 
+         {
+          if a.is_numeric() { 
+              let mut pointer = self.pointer;
+              let start = self.pointer;
+
+              while self.peek(pointer).is_numeric() {
+                  pointer +=1;
+              } 
+
+              if self.peek(pointer) == '.' && self.peek(pointer+1).is_numeric() {
+                  pointer +=1;
+
+                  while self.peek(pointer).is_numeric() { 
+                      self.peek(pointer);
+                      pointer +=1;
+                  };
+              }
+
+              return (token::TokenType::Number, self.get_source_substring(start, pointer)) 
+          } else { panic!("token not found at line {}, token: {}", self.line, self.peek(self.pointer)) }
+        }
+      }
   }
 
   fn error(&self, line: u32, position: u32, message: String) {
@@ -91,7 +112,7 @@ impl Scanner {
       let (_type, value) = self.scan_lexeme();
 
       match &_type {
-        | token::TokenType::String => self.pointer += u32::try_from(value.len()).unwrap(),
+        | token::TokenType::String | token::TokenType::Number => self.pointer += u32::try_from(value.len()).unwrap(),
         | _   => self.pointer+=1,
       }
 
