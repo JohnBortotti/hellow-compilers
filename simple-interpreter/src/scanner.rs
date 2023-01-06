@@ -21,7 +21,7 @@ impl Scanner {
 
   fn match_next(&self, expected: char) -> bool {
     if self.is_at_end(self.pointer) { return false };
-    if self.peek(self.pointer) != expected { return false };
+    if self.peek(self.pointer+1) != expected { return false };
 
     return true;
   }
@@ -73,7 +73,7 @@ impl Scanner {
 
                (token::TokenType::String, self.get_source_substring(start, pointer)) 
       },
-      ' ' => (token::TokenType::Ignore, "".to_string()),
+      ' ' => (token::TokenType::Space, "".to_string()),
       '\r' => (token::TokenType::Ignore, "".to_string()),
       '\t' => (token::TokenType::Ignore, "".to_string()),
       '\n' => (token::TokenType::Break, "".to_string()),
@@ -96,8 +96,20 @@ impl Scanner {
                   };
               }
 
-              return (token::TokenType::Number, self.get_source_substring(start, pointer)) 
-          } else { panic!("token not found at line {}, token: {}", self.line, self.peek(self.pointer)) }
+              return (token::TokenType::Number, self.get_source_substring(start, pointer-1)) 
+          } 
+
+              else if a.is_alphanumeric() {
+                  let mut pointer = self.pointer;
+                  let start = self.pointer;
+
+                  while self.peek(pointer).is_alphanumeric() {
+                      pointer += 1;
+                  }
+
+                  return (token::TokenType::Identifier, self.get_source_substring(start, pointer-1))
+              }
+          else { panic!("token not found at line {}, token: {}", self.line, self.peek(self.pointer)) }
         }
       }
   }
@@ -109,10 +121,35 @@ impl Scanner {
 
   pub fn scan_tokens(mut self) {
     while !self.is_at_end(self.pointer) {
-      let (_type, value) = self.scan_lexeme();
+      let (mut _type, value) = self.scan_lexeme();
 
       match &_type {
-        | token::TokenType::String | token::TokenType::Number => self.pointer += u32::try_from(value.len()).unwrap(),
+        | token::TokenType::String 
+        | token::TokenType::Number => self.pointer += u32::try_from(value.len()).unwrap(),
+        | token::TokenType::Break => { self.line += 1; self.pointer+=1 },
+        | token::TokenType::Identifier => {
+            self.pointer += u32::try_from(value.len()).unwrap();
+
+            _type = match value.as_str() {
+                | "and" => token::TokenType::And,
+                | "class" => token::TokenType::Class,
+                | "else" =>  token::TokenType::Else,
+                | "false" => token::TokenType::False,
+                | "for" => token::TokenType::For,
+                | "fun" => token::TokenType::Fun,
+                | "if" =>  token::TokenType::If,
+                | "nil" => token::TokenType::Nil,
+                | "or" =>  token::TokenType::Or,
+                | "print" =>  token::TokenType::Print,
+                | "return" => token::TokenType::Return,
+                | "super" => token::TokenType::Super,
+                | "this" => token::TokenType::This,
+                | "true" => token::TokenType::True,
+                | "let" => token::TokenType::Let,
+                | "while" => token::TokenType::While,
+                | _ => panic!("keyword not found at line {}, keyword: {}", self.line, value)
+            };
+        }
         | _   => self.pointer+=1,
       }
 
@@ -124,6 +161,5 @@ impl Scanner {
 
     dbg!(self.tokens);
   }
-
 
 }
